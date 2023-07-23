@@ -20,7 +20,7 @@ DHT dht(DHTPIN, DHTTYPE);
 
 #define LDR_PIN 32
 #define LED_PIN 33
-int threshold = 600;
+int threshold = 450;
 
 BlynkTimer timer;
 
@@ -66,7 +66,7 @@ void loop()
   Serial.println(moisture_value);
   Blynk.virtualWrite(V4, moisture_value);
 
-  if (moisture_value > 600) {
+  if (moisture_value < 350) {
     digitalWrite(RELAY_PIN, LOW);
   } else {
     digitalWrite(RELAY_PIN, HIGH);
