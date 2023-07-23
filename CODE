@@ -1,0 +1,95 @@
+#define BLYNK_PRINT Serial
+#include <WiFi.h>
+#include <BlynkSimpleEsp32.h>
+#include <DHT.h>
+
+#define BLYNK_TEMPLATE_ID "TMPL3MkPYskza"
+#define BLYNK_TEMPLATE_NAME "MIHIR DESAI"
+#define BLYNK_AUTH_TOKEN "b0LeOS9GGfEezGwif-vHzUNGUIwQNqBp"
+
+char auth[] = "b0LeOS9GGfEezGwif-vHzUNGUIwQNqBp";
+char ssid[] = "Mihir's F62";  // type your wifi name
+char pass[] = "12345678";  // type your wifi password
+
+#define MOISTURE_SENSOR A0   // analog pin for soil moisture sensor
+#define RELAY_PIN 13 // pin for relay control
+
+#define DHTPIN  26 //Connect Out pin to Esp32
+#define DHTTYPE DHT11  
+DHT dht(DHTPIN, DHTTYPE);
+
+#define LDR_PIN 32
+#define LED_PIN 33
+int threshold = 600;
+
+BlynkTimer timer;
+
+void sendSensor()
+{
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+
+  if (isnan(h) || isnan(t)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+
+  Blynk.virtualWrite(V0, t);
+  Blynk.virtualWrite(V1, h);
+  Serial.print("Temperature: ");
+  Serial.print(t);
+  Serial.print(" Humidity: ");
+  Serial.println(h);
+}
+
+void setup()
+{
+  Serial.begin(115200);
+  Blynk.begin(auth, ssid, pass);
+  dht.begin();
+  timer.setInterval(100L, sendSensor);
+  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(LDR_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);
+}
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+
+  int moisture = analogRead(MOISTURE_SENSOR);
+  Serial.print("Moisture: ");
+  Serial.println(moisture);
+  int moisture_value = map(moisture, 0, 4095, 0, 1023);
+  Serial.print("Moisture value: ");
+  Serial.println(moisture_value);
+  Blynk.virtualWrite(V4, moisture_value);
+
+  if (moisture_value > 600) {
+    digitalWrite(RELAY_PIN, LOW);
+  } else {
+    digitalWrite(RELAY_PIN, HIGH);
+    Blynk.logEvent("water_alert", "Pani sufficient nhi hai...Aur Pani Chahiye!!");
+  }
+
+  int ldrValue = analogRead(LDR_PIN);
+  Serial.print("LDR value: ");
+  Serial.println(ldrValue);
+  float lux = map(ldrValue, 0, 4095, 0, 1023);
+  Serial.print("Lux value: ");
+  Serial.println(lux);
+
+  if (lux > threshold) {
+    digitalWrite(LED_PIN, HIGH);
+    Blynk.virtualWrite(V3, HIGH);
+    Blynk.logEvent("light_alert", "Low light level detected!");
+  } else {
+    digitalWrite(LED_PIN, LOW);
+    Blynk.virtualWrite(V3, LOW);
+  }
+
+  Blynk.virtualWrite(V2, lux);
+
+  delay(1000);
+}
